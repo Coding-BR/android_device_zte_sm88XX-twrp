@@ -28,7 +28,7 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 
 
 # Inherit from dodge device
-$(call inherit-product, device/oneplus/infiniti/device.mk)
+$(call inherit-product, device/redmagic/NX809J/device.mk)
 
 PRODUCT_DEVICE := NX809J
 PRODUCT_NAME := twrp_NX809J
