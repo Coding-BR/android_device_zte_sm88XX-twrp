@@ -2,11 +2,12 @@
 # All rights reserved.
 # Confidential and Proprietary - Qualcomm Technologies, Inc. 
 
-service vendor.gatekeeper_default /vendor/bin/hw/android.hardware.gatekeeper-rust-service-qti
+service vendor.gatekeeper_default /vendor/bin/hw/android.hardware.gatekeeper-service-spu-qti
     class early_hal
+    user root
+    group root
     disabled
-    user system
-    group system
+    seclabel u:r:recovery:s0
 
 on property:vendor.gatekeeper.is_security_level_spu=0
     enable vendor.gatekeeper_default

@@ -9,3 +9,4 @@ service vendor.keymint /vendor/bin/hw/android.hardware.security.onekeymint-servi
     class early_hal
     user system
     group system drmrpc
+    seclabel u:r:recovery:s0

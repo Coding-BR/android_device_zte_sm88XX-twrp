@@ -9,7 +9,7 @@
 #
 
 PRODUCT_MAKEFILES := \
-    $(LOCAL_DIR)/twrp_NX809J.mk
+    $(LOCAL_DIR)/twrp_sm88XX.mk
 
 COMMON_LUNCH_CHOICES := \
-    twrp_NX809J-eng
+    twrp_sm88XX-eng
