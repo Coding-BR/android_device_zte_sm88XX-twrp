@@ -55,6 +55,18 @@ jobs:
             /usr/local/share/boost \
             /usr/local/share/powershell \
             /usr/local/lib/node_modules \
+            /usr/share/google-cloud-sdk \
+            /usr/lib/jvm \
+            /opt/az \
+            /opt/microsoft \
+            /opt/pipx \
+            /usr/local/share/chromium \
+            /usr/local/share/edge_driver \
+            /usr/local/share/gecko_driver \
+            /usr/local/share/phantomjs \
+            /usr/local/share/selenium \
+            /var/lib/gems \
+            /var/cache/apt \
             "$HOME/.cache"
           docker system prune -af || true
           df -h
@@ -81,12 +93,6 @@ jobs:
           sudo mkswap /swapfile
           sudo swapon /swapfile
           free -h
-
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: twrp16-${{ github.event.inputs.DEVICE_NAME }}
-          max-size: 1G
 
       - name: Sync source
         run: |
@@ -161,8 +167,7 @@ jobs:
       - name: Build TWRP
         run: |
           set -e
-          export USE_CCACHE=1
-          export CCACHE_EXEC=/usr/bin/ccache
+          export USE_CCACHE=0
           export SOONG_UI_NINJA_ARGS="-j4"
           source build/envsetup.sh
           lunch "twrp_${{ github.event.inputs.LUNCH_TARGET }}"
