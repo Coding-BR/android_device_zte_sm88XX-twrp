@@ -1,0 +1,180 @@
+name: TWRP 16 Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      TWRP_MANIFEST_URL:
+        description: TWRP manifest URL
+        default: https://github.com/TWRP-Test/platform_manifest_twrp_aosp
+        required: true
+      TWRP_MANIFEST_BRANCH:
+        description: TWRP manifest branch
+        default: twrp-16.0
+        required: true
+      DEVICE_PATH:
+        description: Device tree path under device/
+        default: zte/sm88XX
+        required: true
+      DEVICE_NAME:
+        description: Device codename
+        default: sm88XX
+        required: true
+      LUNCH_TARGET:
+        description: Lunch suffix after twrp_
+        default: sm88XX-aosp_current-eng
+        required: true
+      BUILD_PARTITION:
+        description: Build target without image suffix
+        default: recovery
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Show build info
+        run: |
+          echo "Device path: device/${{ github.event.inputs.DEVICE_PATH }}"
+          echo "Lunch: twrp_${{ github.event.inputs.LUNCH_TARGET }}"
+          echo "Build target: ${{ github.event.inputs.BUILD_PARTITION }}image"
+          echo "Run: ${{ github.run_id }}"
+
+      - name: Cleanup
+        run: |
+          sudo rm -rf \
+            /opt/hostedtoolcache \
+            /usr/local/lib/android \
+            /usr/share/dotnet \
+            /usr/share/swift \
+            /usr/local/.ghcup \
+            /usr/local/share/boost \
+            /usr/local/share/powershell \
+            /usr/local/lib/node_modules \
+            /usr/share/google-cloud-sdk \
+            /usr/lib/jvm \
+            /opt/az \
+            /opt/microsoft \
+            /opt/pipx \
+            /usr/local/share/chromium \
+            /usr/local/share/edge_driver \
+            /usr/local/share/gecko_driver \
+            /usr/local/share/phantomjs \
+            /usr/local/share/selenium \
+            /var/lib/gems \
+            /var/cache/apt \
+            "$HOME/.cache"
+          docker system prune -af || true
+          df -h
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc bison build-essential ccache curl flex g++-multilib gcc-multilib \
+            git gnupg gperf imagemagick lib32ncurses-dev lib32readline-dev \
+            lib32z1-dev libelf-dev liblz4-tool libncurses-dev libsdl1.2-dev \
+            libssl-dev libxml2 libxml2-utils lzop pngcrush python3 rsync \
+            schedtool squashfs-tools xsltproc zip zlib1g-dev
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo > "$HOME/bin/repo"
+          chmod a+x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Setup swap
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: Sync source
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          repo init --depth=1 -u "${{ github.event.inputs.TWRP_MANIFEST_URL }}" -b "${{ github.event.inputs.TWRP_MANIFEST_BRANCH }}"
+          repo sync -c --force-sync --no-clone-bundle --no-tags -j"$(nproc)"
+
+      - name: Check out device tree
+        uses: actions/checkout@v4
+        with:
+          path: device/${{ github.event.inputs.DEVICE_PATH }}
+
+      - name: Patch recovery touch input for NX809J
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+
+          events = Path("bootable/recovery/minuitwrp/events.cpp")
+          text = events.read_text()
+          old_key_block = (
+              "\t// Handle keyboard events, value of 1 indicates key down, 0 indicates key up\n"
+              "\tif (ev->type == EV_KEY) {\n"
+              "\t\treturn 0;\n"
+              "\t}\n"
+          )
+          new_key_block = (
+              "\t// Handle keyboard events, value of 1 indicates key down, 0 indicates key up\n"
+              "\tif (ev->type == EV_KEY) {\n"
+              "\t\tif (ev->code == BTN_TOUCH || ev->code == BTN_TOOL_FINGER)\n"
+              "\t\t\treturn 1;\n"
+              "\t\treturn 0;\n"
+              "\t}\n"
+          )
+          if old_key_block not in text:
+              raise SystemExit("events.cpp key handling block not found")
+          text = text.replace(
+              old_key_block,
+              new_key_block,
+          )
+          old_scale_block = (
+              "    *x = (p->x - p->xi.minimum) * (fb_width - 1) / (p->xi.maximum - p->xi.minimum);\n"
+              "    *y = (p->y - p->yi.minimum) * (fb_height - 1) / (p->yi.maximum - p->yi.minimum);\n"
+          )
+          new_scale_block = (
+              "    if (p->xi.maximum > fb_width * 4 && p->yi.maximum > fb_height * 4 &&\n"
+              "        p->x >= 0 && p->x < fb_width && p->y >= 0 && p->y < fb_height) {\n"
+              "        *x = p->x;\n"
+              "        *y = p->y;\n"
+              "    } else {\n"
+              "        *x = (p->x - p->xi.minimum) * (fb_width - 1) / (p->xi.maximum - p->xi.minimum);\n"
+              "        *y = (p->y - p->yi.minimum) * (fb_height - 1) / (p->yi.maximum - p->yi.minimum);\n"
+              "    }\n"
+          )
+          if old_scale_block not in text:
+              raise SystemExit("events.cpp touch scale block not found")
+          text = text.replace(old_scale_block, new_scale_block)
+          events.write_text(text)
+          PY
+
+      - name: Build TWRP
+        run: |
+          set -e
+          export USE_CCACHE=0
+          export SOONG_UI_NINJA_ARGS="-j4"
+          source build/envsetup.sh
+          lunch "twrp_${{ github.event.inputs.LUNCH_TARGET }}"
+          m -j4 "${{ github.event.inputs.BUILD_PARTITION }}image"
+          mkdir -p artifacts
+          cp "out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_PARTITION }}.img" \
+             "artifacts/TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}.img"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}
+          path: artifacts/*.img
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: twrp-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}
+          name: TWRP 3.7.1-16 ${{ github.event.inputs.DEVICE_NAME }} ${{ github.event.inputs.BUILD_PARTITION }} ${{ github.run_id }}
+          files: artifacts/*.img
