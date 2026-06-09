@@ -63,6 +63,15 @@ jobs:
           chmod a+x "$HOME/bin/repo"
           echo "$HOME/bin" >> "$GITHUB_PATH"
 
+      - name: Setup swap
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
@@ -86,9 +95,10 @@ jobs:
           set -e
           export USE_CCACHE=1
           export CCACHE_EXEC=/usr/bin/ccache
+          export SOONG_UI_NINJA_ARGS="-j4"
           source build/envsetup.sh
           lunch "twrp_${{ github.event.inputs.LUNCH_TARGET }}"
-          m "${{ github.event.inputs.BUILD_PARTITION }}image"
+          m -j4 "${{ github.event.inputs.BUILD_PARTITION }}image"
           mkdir -p artifacts
           cp "out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_PARTITION }}.img" \
              "artifacts/TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}.img"
