@@ -2,7 +2,7 @@
 
 ## Supported devices
 - RedMagic 11 pro
-- ZTE Z80 UNLTRA
+- ZTE Z80 Ultra
 ## Build it yourself?
 
 ```shell
