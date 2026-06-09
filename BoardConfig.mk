@@ -139,7 +139,7 @@ TW_SCREEN_W := 1216
 TW_SCREEN_H := 2688
 TARGET_SCREEN_WIDTH := 1216
 TARGET_SCREEN_HEIGHT := 2688
-TW_INPUT_BLACKLIST := "goodix_fp:nubia_tgk_aw_sar0_ch0:nubia_tgk_aw_sar1_ch0:gpio-keys_nubia:canoe-mtp-wsa884x-snd-card Headset Jack:canoe-mtp-wsa884x-snd-card Button Jack"
+TW_INPUT_BLACKLIST := "goodix_fp\x0anubia_tgk_aw_sar0_ch0\x0anubia_tgk_aw_sar1_ch0\x0agpio-keys_nubia\x0acanoe-mtp-wsa884x-snd-card Headset Jack\x0acanoe-mtp-wsa884x-snd-card Button Jack"
 
 # TWRP file system
 RECOVERY_SDCARD_ON_DATA := true
