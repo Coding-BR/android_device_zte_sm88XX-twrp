@@ -32,7 +32,7 @@ Works:
 - [X] MTP
 - Sideload (?)
 - [X] USB OTG
-- Touch (no work) 
+- [X] Touchscreen
 
 ## To use it:
 
@@ -46,3 +46,7 @@ or
 fastboot flash recovery_a recovery.img
 fastboot flash recovery_b recovery.img
 ```
+
+## Notes
+
+- Touchscreen was tested on REDMAGIC 11 Pro / NX809J. The working build fixes the `synaptics_tcm_touch` coordinate mapping used by this panel.
