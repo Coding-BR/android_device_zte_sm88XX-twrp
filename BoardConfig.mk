@@ -129,12 +129,17 @@ RECOVERY_BINARY_SOURCE_FILES += $(TARGET_OUT_EXECUTABLES)/strace
 
 # TWRP display
 TW_BRIGHTNESS_PATH := "/sys/class/backlight/panel0-backlight/brightness"
-TW_DEFAULT_BRIGHTNESS := 2047
+TW_DEFAULT_BRIGHTNESS := 1500
 TW_FRAMERATE := 120
-TW_MAX_BRIGHTNESS := 4094
+TW_MAX_BRIGHTNESS := 8190
 TW_NO_SCREEN_BLANK := true
 TW_SCREEN_BLANK_ON_BOOT := false
 TW_THEME := portrait_hdpi
+TW_SCREEN_W := 1216
+TW_SCREEN_H := 2688
+TARGET_SCREEN_WIDTH := 1216
+TARGET_SCREEN_HEIGHT := 2688
+TW_INPUT_BLACKLIST := "goodix_fp:nubia_tgk_aw_sar0_ch0:nubia_tgk_aw_sar1_ch0:gpio-keys_nubia:canoe-mtp-wsa884x-snd-card Headset Jack:canoe-mtp-wsa884x-snd-card Button Jack"
 
 # TWRP file system
 RECOVERY_SDCARD_ON_DATA := true

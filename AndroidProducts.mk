@@ -12,4 +12,7 @@ PRODUCT_MAKEFILES := \
     $(LOCAL_DIR)/twrp_sm88XX.mk
 
 COMMON_LUNCH_CHOICES := \
-    twrp_sm88XX-eng
+    twrp_sm88XX-eng \
+    twrp_sm88XX-userdebug \
+    twrp_sm88XX-aosp_current-eng \
+    twrp_sm88XX-aosp_current-userdebug
