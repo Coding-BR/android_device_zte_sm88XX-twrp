@@ -24,6 +24,10 @@ PRODUCT_TARGET_VNDK_VERSION := 36
 # Dynamic partitions
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
+# Fastbootd
+PRODUCT_PACKAGES += \
+    fastbootd
+
 # Kernel
 PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS   := false
 PRODUCT_ENABLE_UFFD_GC                          := true
