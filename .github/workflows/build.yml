@@ -114,9 +114,6 @@ jobs:
 
           events = Path("bootable/recovery/minuitwrp/events.cpp")
           text = events.read_text()
-          if "//#define _EVENT_LOGGING" not in text:
-              raise SystemExit("events.cpp event logging marker not found")
-          text = text.replace("//#define _EVENT_LOGGING", "#define _EVENT_LOGGING")
           old_key_block = (
               "\t// Handle keyboard events, value of 1 indicates key down, 0 indicates key up\n"
               "\tif (ev->type == EV_KEY) {\n"
@@ -155,13 +152,6 @@ jobs:
               raise SystemExit("events.cpp touch scale block not found")
           text = text.replace(old_scale_block, new_scale_block)
           events.write_text(text)
-
-          gui = Path("bootable/recovery/gui/gui.cpp")
-          text = gui.read_text()
-          if "#ifdef _EVENT_LOGGING\n#define LOGEVENT" not in text:
-              raise SystemExit("gui.cpp LOGEVENT marker not found")
-          text = text.replace("#ifdef _EVENT_LOGGING\n#define LOGEVENT", "#define _EVENT_LOGGING\n#ifdef _EVENT_LOGGING\n#define LOGEVENT")
-          gui.write_text(text)
           PY
 
       - name: Build TWRP
