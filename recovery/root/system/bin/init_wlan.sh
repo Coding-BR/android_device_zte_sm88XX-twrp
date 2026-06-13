@@ -5,6 +5,8 @@ SYSDLKM=/system_dlkm/lib/modules
 CTRL_DIR=/tmp/recovery/sockets
 WPA_CONF=/tmp/recovery/wpa_supplicant.conf
 WPA_SUPP=/system/bin/wpa_supplicant_recovery
+LD_LIBRARY_PATH=/vendor/lib64:/system/lib64
+export LD_LIBRARY_PATH
 
 load_module() {
     [ -f "$1" ] || return 0
@@ -45,10 +47,12 @@ fi
 sleep 1
 [ -e /sys/kernel/cnss/fs_ready ] && echo 1 > /sys/kernel/cnss/fs_ready 2>/dev/null || true
 
-for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24; do
     if ifconfig wlan0 >/dev/null 2>&1; then
         ifconfig wlan0 up >/dev/null 2>&1 || true
-        break
+        if ifconfig wlan0 2>/dev/null | grep -q "UP"; then
+            break
+        fi
     fi
     sleep 1
 done
