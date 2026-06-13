@@ -30,8 +30,8 @@ PRODUCT_PACKAGES += \
 
 # Wi-Fi
 PRODUCT_PACKAGES += \
-    wpa_cli \
-    wpa_supplicant
+    wpa_cli_recovery \
+    wpa_supplicant_recovery
 
 # Kernel
 PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS   := false

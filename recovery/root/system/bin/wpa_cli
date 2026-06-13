@@ -1,0 +1,3 @@
+#!/system/bin/sh
+
+exec /system/bin/wpa_cli_recovery "$@"

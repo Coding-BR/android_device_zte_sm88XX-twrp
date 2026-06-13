@@ -109,6 +109,59 @@ jobs:
               https://android.googlesource.com/platform/external/wpa_supplicant_8 \
               external/wpa_supplicant_8
           fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          bp = Path("external/wpa_supplicant_8/wpa_supplicant/Android.bp")
+          text = bp.read_text()
+          marker = "wpa_supplicant_recovery"
+          if marker not in text:
+              text += r'''
+
+          cc_binary {
+              name: "wpa_cli_recovery",
+              recovery: true,
+              srcs: [
+                  "wpa_cli.c",
+                  "src/common/cli.c",
+                  "src/common/wpa_ctrl.c",
+                  "src/utils/common.c",
+                  "src/utils/edit.c",
+                  "src/utils/eloop.c",
+                  "src/utils/os_unix.c",
+                  "src/utils/wpa_debug.c",
+              ],
+              shared_libs: [
+                  "libcutils",
+                  "liblog",
+              ],
+              defaults: [
+                  "wpa_supplicant_no_aidl_cflags_default",
+                  "wpa_supplicant_includes_default",
+              ],
+          }
+
+          cc_binary {
+              name: "wpa_supplicant_recovery",
+              recovery: true,
+              shared_libs: [
+                  "libc",
+                  "libcrypto",
+                  "libcutils",
+                  "libkeystore-engine-wifi-hidl",
+                  "liblog",
+                  "libnl",
+                  "libssl",
+              ],
+              defaults: [
+                  "wpa_supplicant_srcs_default",
+                  "wpa_supplicant_no_aidl_cflags_default",
+                  "wpa_supplicant_includes_default",
+              ],
+          }
+          '''
+              bp.write_text(text)
+          PY
 
       - name: Check out device tree
         uses: actions/checkout@v4

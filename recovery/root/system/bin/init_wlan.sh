@@ -4,7 +4,7 @@ MODDIR=/tmp/vendor/lib/modules
 SYSDLKM=/system_dlkm/lib/modules
 CTRL_DIR=/tmp/recovery/sockets
 WPA_CONF=/tmp/recovery/wpa_supplicant.conf
-WPA_SUPP=/system/bin/wpa_supplicant
+WPA_SUPP=/system/bin/wpa_supplicant_recovery
 
 load_module() {
     [ -f "$1" ] || return 0
