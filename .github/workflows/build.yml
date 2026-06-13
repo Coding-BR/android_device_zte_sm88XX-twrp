@@ -101,6 +101,15 @@ jobs:
           repo init --depth=1 -u "${{ github.event.inputs.TWRP_MANIFEST_URL }}" -b "${{ github.event.inputs.TWRP_MANIFEST_BRANCH }}"
           repo sync -c --force-sync --no-clone-bundle --no-tags -j"$(nproc)"
 
+      - name: Restore wpa_supplicant source
+        run: |
+          set -e
+          if [ ! -d external/wpa_supplicant_8 ]; then
+            git clone --depth=1 --branch android-16.0.0_r1 \
+              https://android.googlesource.com/platform/external/wpa_supplicant_8 \
+              external/wpa_supplicant_8
+          fi
+
       - name: Check out device tree
         uses: actions/checkout@v4
         with:
