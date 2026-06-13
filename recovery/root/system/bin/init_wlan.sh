@@ -4,6 +4,7 @@ MODDIR=/tmp/vendor/lib/modules
 SYSDLKM=/system_dlkm/lib/modules
 CTRL_DIR=/tmp/recovery/sockets
 WPA_CONF=/tmp/recovery/wpa_supplicant.conf
+WPA_SUPP=/system/bin/wpa_supplicant
 
 load_module() {
     [ -f "$1" ] || return 0
@@ -52,16 +53,17 @@ for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
     sleep 1
 done
 
-mkdir -p "$CTRL_DIR"
-chmod 0770 "$CTRL_DIR"
+mkdir -p /tmp/recovery "$CTRL_DIR"
+chmod 0775 /tmp/recovery
+chmod 0777 "$CTRL_DIR"
 
 cat > "$WPA_CONF" <<EOF
 ctrl_interface=$CTRL_DIR
 update_config=1
 ap_scan=1
 EOF
-chmod 0600 "$WPA_CONF"
+chmod 0644 "$WPA_CONF"
 
-if ! pidof wpa_supplicant >/dev/null 2>&1; then
-    wpa_supplicant -B -iwlan0 -Dnl80211 -c"$WPA_CONF" -O"$CTRL_DIR" >/tmp/recovery/wpa_supplicant.log 2>&1 || true
+if ! pidof wpa_supplicant >/dev/null 2>&1 && [ -x "$WPA_SUPP" ]; then
+    "$WPA_SUPP" -B -iwlan0 -Dnl80211 -c"$WPA_CONF" -O"$CTRL_DIR" >/tmp/recovery/wpa_supplicant.log 2>&1 || true
 fi
