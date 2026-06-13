@@ -1,0 +1,9 @@
+service recovery_wlan /system/bin/sh /system/bin/init_wlan.sh
+    user root
+    group root
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+on property:twrp.modules.loaded=true
+    start recovery_wlan
