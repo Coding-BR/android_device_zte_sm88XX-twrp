@@ -27,7 +27,7 @@ Works:
 - [X] ADB
 - [X] Display
 - [X] Decryption
-- Fasbootd (no work)
+- [X] Fastbootd
 - [X] Flashing
 - [X] MTP
 - Sideload (?)
