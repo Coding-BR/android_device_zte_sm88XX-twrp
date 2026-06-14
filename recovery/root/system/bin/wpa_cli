@@ -5,6 +5,8 @@ export LD_LIBRARY_PATH
 
 IFACE=wlan0
 CTRL_DIR=/tmp/recovery/sockets
+WPA_CONF=/tmp/recovery/wpa_supplicant.conf
+WPA_SUPP=/system/bin/wpa_supplicant_recovery
 CMD=""
 
 parse_args() {
@@ -48,9 +50,50 @@ wait_for_ctrl() {
     return 1
 }
 
-wait_for_ctrl || exec /system/bin/wpa_cli_recovery "$@"
+restart_supplicant() {
+    PID="$(pidof wpa_supplicant_recovery 2>/dev/null)"
+    [ -n "$PID" ] && kill -9 $PID >/dev/null 2>&1
+    rm -f "$CTRL_DIR/$IFACE"
+    mkdir -p "$CTRL_DIR"
+    chmod 0777 "$CTRL_DIR"
+    if [ ! -s "$WPA_CONF" ]; then
+        cat > "$WPA_CONF" <<EOF
+ctrl_interface=$CTRL_DIR
+update_config=1
+ap_scan=1
+EOF
+    fi
+    chmod 0644 "$WPA_CONF"
+    "$WPA_SUPP" -B -i"$IFACE" -Dnl80211 -c"$WPA_CONF" -O"$CTRL_DIR" >/dev/null 2>&1
+    wait_for_ctrl
+}
+
+if ! wait_for_ctrl; then
+    if [ "$CMD" = "reconfigure" ]; then
+        restart_supplicant >/dev/null 2>&1 || exit 1
+        echo "OK"
+        exit 0
+    fi
+    exec /system/bin/wpa_cli_recovery "$@"
+fi
 
 case "$CMD" in
+    reconfigure)
+        /system/bin/wpa_cli_recovery "$@" >/dev/null 2>&1 || true
+        restart_supplicant >/dev/null 2>&1 || exit 1
+        echo "OK"
+        ;;
+    reconnect|select_network|enable_network)
+        OUT="$(/system/bin/wpa_cli_recovery "$@" 2>&1)"
+        STATUS=$?
+        echo "$OUT"
+        [ "$STATUS" -eq 0 ] || exit "$STATUS"
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+            /system/bin/wpa_cli_recovery -i"$IFACE" -p"$CTRL_DIR" status 2>/dev/null | grep -q "wpa_state=COMPLETED" && exit 0
+            sleep 1
+        done
+        exit 0
+        ;;
     scan)
         for _ in 1 2 3 4 5; do
             OUT="$(/system/bin/wpa_cli_recovery "$@" 2>&1)"

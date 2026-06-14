@@ -61,11 +61,13 @@ mkdir -p /tmp/recovery "$CTRL_DIR"
 chmod 0775 /tmp/recovery
 chmod 0777 "$CTRL_DIR"
 
-cat > "$WPA_CONF" <<EOF
+if [ ! -s "$WPA_CONF" ]; then
+    cat > "$WPA_CONF" <<EOF
 ctrl_interface=$CTRL_DIR
 update_config=1
 ap_scan=1
 EOF
+fi
 chmod 0644 "$WPA_CONF"
 
 if ! pidof wpa_supplicant_recovery >/dev/null 2>&1 && [ -x "$WPA_SUPP" ]; then
