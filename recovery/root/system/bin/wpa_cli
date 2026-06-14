@@ -1,3 +1,80 @@
 #!/system/bin/sh
 
-exec /system/bin/wpa_cli_recovery "$@"
+LD_LIBRARY_PATH=/vendor/lib64:/system/lib64
+export LD_LIBRARY_PATH
+
+IFACE=wlan0
+CTRL_DIR=/tmp/recovery/sockets
+CMD=""
+
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -i*)
+                if [ "$1" = "-i" ]; then
+                    shift
+                    IFACE="$1"
+                else
+                    IFACE="${1#-i}"
+                fi
+                ;;
+            -p*)
+                if [ "$1" = "-p" ]; then
+                    shift
+                    CTRL_DIR="$1"
+                else
+                    CTRL_DIR="${1#-p}"
+                fi
+                ;;
+            -*)
+                ;;
+            *)
+                CMD="$1"
+                break
+                ;;
+        esac
+        shift
+    done
+}
+
+parse_args "$@"
+
+wait_for_ctrl() {
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+        [ -S "$CTRL_DIR/$IFACE" ] && return 0
+        /system/bin/wpa_cli_recovery -i"$IFACE" -p"$CTRL_DIR" ping >/dev/null 2>&1 && return 0
+        sleep 1
+    done
+    return 1
+}
+
+wait_for_ctrl || exec /system/bin/wpa_cli_recovery "$@"
+
+case "$CMD" in
+    scan)
+        for _ in 1 2 3 4 5; do
+            OUT="$(/system/bin/wpa_cli_recovery "$@" 2>&1)"
+            STATUS=$?
+            echo "$OUT"
+            echo "$OUT" | grep -q "^OK$" && exit 0
+            sleep 1
+        done
+        exit $STATUS
+        ;;
+    scan_results)
+        for _ in 1 2 3 4 5; do
+            OUT="$(/system/bin/wpa_cli_recovery "$@" 2>&1)"
+            STATUS=$?
+            echo "$OUT"
+            if [ "$STATUS" -eq 0 ] && [ "$(echo "$OUT" | wc -l)" -gt 1 ]; then
+                exit 0
+            fi
+            /system/bin/wpa_cli_recovery -i"$IFACE" -p"$CTRL_DIR" scan >/dev/null 2>&1 || true
+            sleep 2
+        done
+        exit $STATUS
+        ;;
+    *)
+        exec /system/bin/wpa_cli_recovery "$@"
+        ;;
+esac
