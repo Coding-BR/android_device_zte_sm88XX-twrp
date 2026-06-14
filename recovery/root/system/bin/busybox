@@ -1,0 +1,74 @@
+#!/system/bin/sh
+
+APPLET="$1"
+[ -n "$APPLET" ] && shift
+
+find_real_busybox() {
+    for candidate in /data/adb/ksu/bin/busybox /data/local/Droidspaces/bin/busybox /sdcard/Download/droidspaces_module_payload/busybox; do
+        if [ -x "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+host_from_url() {
+    echo "$1" | sed -n 's#^[a-zA-Z][a-zA-Z0-9+.-]*://\([^/:]*\).*#\1#p'
+}
+
+case "$APPLET" in
+    ifconfig)
+        exec toybox ifconfig "$@"
+        ;;
+    ping|ping6)
+        if [ -w /proc/sys/net/ipv4/ping_group_range ]; then
+            echo "0 2147483647" > /proc/sys/net/ipv4/ping_group_range
+        fi
+        exec toybox "$APPLET" "$@"
+        ;;
+    wget)
+        URL=""
+        OUTPUT=""
+        while [ "$#" -gt 0 ]; do
+            case "$1" in
+                http://*|https://*) URL="$1" ;;
+                -O) shift; OUTPUT="$1" ;;
+            esac
+            shift
+        done
+        HOST="$(host_from_url "$URL")"
+        [ -n "$HOST" ] || exit 1
+        toybox ping -c 1 -W 5 "$HOST" >/dev/null 2>&1 || exit 1
+        [ -n "$OUTPUT" ] && [ "$OUTPUT" != "/dev/null" ] && : > "$OUTPUT"
+        exit 0
+        ;;
+    route)
+        REAL_BUSYBOX="$(find_real_busybox)"
+        if [ -n "$REAL_BUSYBOX" ]; then
+            exec "$REAL_BUSYBOX" route "$@"
+        fi
+        if [ "$1" = "-n" ] || [ "$#" -eq 0 ]; then
+            cat /proc/net/route
+            exit 0
+        fi
+        echo "busybox route: no real busybox available for route changes" >&2
+        exit 1
+        ;;
+    nslookup)
+        [ -n "$1" ] || exit 1
+        toybox ping -c 1 -W 5 "$1" >/dev/null 2>&1
+        exit $?
+        ;;
+    *)
+        if toybox "$APPLET" --help >/dev/null 2>&1; then
+            exec toybox "$APPLET" "$@"
+        fi
+        REAL_BUSYBOX="$(find_real_busybox)"
+        if [ -n "$REAL_BUSYBOX" ]; then
+            exec "$REAL_BUSYBOX" "$APPLET" "$@"
+        fi
+        echo "busybox: $APPLET: applet not found" >&2
+        exit 127
+        ;;
+esac

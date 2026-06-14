@@ -163,15 +163,6 @@ jobs:
               bp.write_text(text)
           PY
 
-      - name: Restore TWRP busybox source
-        run: |
-          set -e
-          if [ ! -d external/busybox ]; then
-            git clone --depth=1 --branch ics \
-              https://github.com/TeamWin/TWRP-busybox \
-              external/busybox
-          fi
-
       - name: Check out device tree
         uses: actions/checkout@v4
         with:
