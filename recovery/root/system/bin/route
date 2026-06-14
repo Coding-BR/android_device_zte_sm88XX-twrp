@@ -1,0 +1,10 @@
+#!/system/bin/sh
+
+for busybox in /data/adb/ksu/bin/busybox /data/local/Droidspaces/bin/busybox /system/bin/busybox; do
+    if [ -x "$busybox" ]; then
+        exec "$busybox" route "$@"
+    fi
+done
+
+echo "route: busybox not found" >&2
+exit 127

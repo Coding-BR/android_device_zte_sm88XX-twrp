@@ -1,0 +1,7 @@
+#!/system/bin/sh
+
+if [ -w /proc/sys/net/ipv4/ping_group_range ]; then
+    echo "0 2147483647" > /proc/sys/net/ipv4/ping_group_range
+fi
+
+exec toybox ping "$@"
