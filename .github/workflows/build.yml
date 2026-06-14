@@ -219,14 +219,32 @@ jobs:
       - name: Build TWRP
         run: |
           set -e
+          mkdir -p artifacts
           export USE_CCACHE=0
           export SOONG_UI_NINJA_ARGS="-j2"
           source build/envsetup.sh
           lunch "twrp_${{ github.event.inputs.LUNCH_TARGET }}"
-          m -j2 "${{ github.event.inputs.BUILD_PARTITION }}image"
-          mkdir -p artifacts
+          {
+            echo "Disk before build:"
+            df -h
+            echo "Memory before build:"
+            free -h
+            m -j2 "${{ github.event.inputs.BUILD_PARTITION }}image"
+            echo "Disk after build:"
+            df -h
+            echo "Memory after build:"
+            free -h
+          } 2>&1 | tee artifacts/build.log
+          test "${PIPESTATUS[0]}" -eq 0
           cp "out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_PARTITION }}.img" \
              "artifacts/TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}.img"
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TWRP-build-log-${{ github.run_id }}
+          path: artifacts/build.log
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
