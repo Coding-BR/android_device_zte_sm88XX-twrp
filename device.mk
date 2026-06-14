@@ -30,6 +30,7 @@ PRODUCT_PACKAGES += \
 
 # Wi-Fi
 PRODUCT_PACKAGES += \
+    busybox \
     wpa_cli_recovery \
     wpa_supplicant_recovery
 
