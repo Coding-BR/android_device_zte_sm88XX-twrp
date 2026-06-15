@@ -45,19 +45,6 @@ jobs:
           echo "Run: ${{ github.run_id }}"
           df -h
 
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@v10
-        with:
-          root-reserve-mb: 2048
-          temp-reserve-mb: 100
-          swap-size-mb: 4096
-          overprovision-lvm: 'true'
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
-
       - name: Cleanup
         run: |
           sudo rm -rf \
@@ -84,6 +71,13 @@ jobs:
             "$HOME/.cache"
           docker system prune -af || true
           df -h
+          root_size_gb="$(df -BG / | awk 'NR==2 {gsub("G","",$2); print $2}')"
+          root_avail_gb="$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')"
+          if [ "${root_size_gb}" -lt 120 ]; then
+            echo "Runner root filesystem is too small for this TWRP build: ${root_size_gb}G total, ${root_avail_gb}G available."
+            echo "Re-run the workflow until GitHub assigns a 145G runner."
+            exit 1
+          fi
 
       - name: Install packages
         run: |
@@ -101,6 +95,11 @@ jobs:
 
       - name: Setup swap
         run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
           free -h
           swapon --show || true
           df -h
@@ -254,8 +253,6 @@ jobs:
           {
             echo "Disk before build:"
             df -h
-            echo "Workspace usage before build:"
-            du -sh . out device/zte/sm88XX 2>/dev/null || true
             echo "Memory before build:"
             free -h
             m -j2 "${{ github.event.inputs.BUILD_PARTITION }}image" &
@@ -263,8 +260,6 @@ jobs:
             (
               while kill -0 "${build_pid}" 2>/dev/null; do
                 echo "Build still running at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                df -h
-                free -h
                 sleep 300
               done
             ) &
