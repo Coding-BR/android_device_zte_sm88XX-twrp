@@ -255,7 +255,25 @@ jobs:
             df -h
             echo "Memory before build:"
             free -h
-            m -j1 "${{ github.event.inputs.BUILD_PARTITION }}image"
+            m -j1 "${{ github.event.inputs.BUILD_PARTITION }}image" &
+            build_pid=$!
+            (
+              while kill -0 "${build_pid}" 2>/dev/null; do
+                echo "Build heartbeat at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                ps -o pid,ppid,etime,%cpu,%mem,rss,cmd -p "${build_pid}" || true
+                free -h || true
+                df -h / || true
+                sleep 60
+              done
+            ) &
+            heartbeat_pid=$!
+            set +e
+            wait "${build_pid}"
+            build_status=$?
+            kill "${heartbeat_pid}" 2>/dev/null || true
+            wait "${heartbeat_pid}" 2>/dev/null || true
+            set -e
+            test "${build_status}" -eq 0
             echo "Disk after build:"
             df -h
             echo "Memory after build:"
