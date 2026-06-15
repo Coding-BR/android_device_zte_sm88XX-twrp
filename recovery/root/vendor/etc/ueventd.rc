@@ -481,6 +481,18 @@ subsystem mem_buf_vm
 #Haptics class devices
 /sys/class/qcom-haptics    visense_enabled     0400    system    system
 /sys/class/qcom-haptics    primitive_duration  0600    system    system
+/dev/awinic_haptic                         0666    system    system
+/dev/awinic_x_haptic                       0666    system    system
+/dev/aac_richtap_dev                       0666    system    system
+/sys/class/leds/zte_vibrator               activate       0664    system    system
+/sys/class/leds/zte_vibrator               activate_aw    0664    system    system
+/sys/class/leds/zte_vibrator               brightness     0666    system    system
+/sys/class/leds/zte_vibrator               duration       0664    system    system
+/sys/class/leds/zte_vibrator               duration_aw    0664    system    system
+/sys/class/leds/zte_vibrator               gain           0664    system    system
+/sys/class/leds/zte_vibrator               index          0664    system    system
+/sys/class/leds/zte_vibrator               state          0664    system    system
+/sys/class/leds/zte_vibrator               trigger        0664    system    system
 
 # NPU device
 /dev/msm_npu             0644   system     system
