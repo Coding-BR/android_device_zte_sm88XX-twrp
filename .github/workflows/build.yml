@@ -255,22 +255,7 @@ jobs:
             df -h
             echo "Memory before build:"
             free -h
-            m -j2 "${{ github.event.inputs.BUILD_PARTITION }}image" &
-            build_pid=$!
-            (
-              while kill -0 "${build_pid}" 2>/dev/null; do
-                echo "Build still running at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                sleep 300
-              done
-            ) &
-            heartbeat_pid=$!
-            set +e
-            wait "${build_pid}"
-            build_status=$?
-            kill "${heartbeat_pid}" 2>/dev/null || true
-            wait "${heartbeat_pid}" 2>/dev/null || true
-            set -e
-            test "${build_status}" -eq 0
+            m -j2 "${{ github.event.inputs.BUILD_PARTITION }}image"
             echo "Disk after build:"
             df -h
             echo "Memory after build:"
