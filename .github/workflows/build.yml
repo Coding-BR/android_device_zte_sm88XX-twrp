@@ -242,6 +242,27 @@ jobs:
           events.write_text(text)
           PY
 
+      - name: Patch recovery haptics for NX809J
+        run: |
+          set -e
+          python3 - <<'PY'
+          from pathlib import Path
+
+          events = Path("bootable/recovery/minuitwrp/events.cpp")
+          text = events.read_text()
+          old = (
+              '#define LEDS_HAPTICS_DURATION_FILE\t"/sys/class/leds/vibrator/duration"\n'
+              '#define LEDS_HAPTICS_ACTIVATE_FILE\t"/sys/class/leds/vibrator/activate"\n'
+          )
+          new = (
+              '#define LEDS_HAPTICS_DURATION_FILE\t"/sys/class/leds/zte_vibrator/duration_aw"\n'
+              '#define LEDS_HAPTICS_ACTIVATE_FILE\t"/sys/class/leds/zte_vibrator/activate_aw"\n'
+          )
+          if old not in text:
+              raise SystemExit("events.cpp LED haptics path block not found")
+          events.write_text(text.replace(old, new))
+          PY
+
       - name: Build TWRP
         run: |
           set -e
