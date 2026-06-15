@@ -26,6 +26,7 @@
 #
 
 import /init.recovery.wlan.rc
+import /vendor/etc/init/vendor.qti.hardware.vibrator.service.rc
 
 on init
     write /sys/fs/selinux/checkreqprot 0
