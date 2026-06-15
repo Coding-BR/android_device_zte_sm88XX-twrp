@@ -48,9 +48,10 @@ jobs:
       - name: Maximize build space
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 8192
-          temp-reserve-mb: 1024
-          swap-size-mb: 8192
+          root-reserve-mb: 2048
+          temp-reserve-mb: 100
+          swap-size-mb: 4096
+          overprovision-lvm: 'true'
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
@@ -253,6 +254,8 @@ jobs:
           {
             echo "Disk before build:"
             df -h
+            echo "Workspace usage before build:"
+            du -sh . out device/zte/sm88XX 2>/dev/null || true
             echo "Memory before build:"
             free -h
             m -j2 "${{ github.event.inputs.BUILD_PARTITION }}image" &
@@ -260,6 +263,8 @@ jobs:
             (
               while kill -0 "${build_pid}" 2>/dev/null; do
                 echo "Build still running at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                df -h
+                free -h
                 sleep 300
               done
             ) &
