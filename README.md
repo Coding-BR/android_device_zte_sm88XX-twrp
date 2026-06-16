@@ -50,11 +50,30 @@ Needs more testing:
 
 ## Install
 
+Using a userdebug ABL makes installation easier because it enables fastboot access.
+
+Quick ZTE Toolbox flow:
+
+1. Open ZTE Toolbox.
+2. Select option `12`.
+3. Enter the target ABL partition name: `abl_a` or `abl_b`.
+4. Flash the userdebug ABL to enable fastboot.
+5. Boot into fastboot.
+6. Select option `2` in ZTE Toolbox to flash the recovery image.
+
+If flashing recovery from ZTE Toolbox option `12`, enter the partition name directly as:
+
+```text
+recovery
+```
+
+Manual fastboot commands:
+
 ```shell
 fastboot flash recovery recovery.img
 ```
 
-or
+or flash both recovery slots:
 
 ```shell
 fastboot flash recovery_a recovery.img
