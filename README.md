@@ -50,6 +50,9 @@ Needs more testing:
 
 ## Install
 
+<p><strong><span style="color:red">PROHIBITED: Do not try to fix or change the device fingerprint after using this TWRP.</span></strong></p>
+<p><strong><span style="color:red">PROHIBITED: Do not install this TWRP while Magisk or KernelSU modules are active.</span></strong></p>
+
 Using a userdebug ABL can make installation easier because it enables fastboot access. The `abl_unlock.elf` file is included in this repository.
 
 To enable fastboot with ZTE Toolbox:
@@ -84,6 +87,8 @@ fastboot flash recovery_b recovery.img
 ```
 
 On the tested NX809J unit, flashing the active recovery slot was enough. No extra vbmeta disable step was required for the tested TWRP recovery image.
+
+If the phone enters a bootloop after installation, open ZTE Toolbox and select option `19`.
 
 ## Notes
 
