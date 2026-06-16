@@ -5,18 +5,6 @@
 - REDMAGIC 11 Pro / NX809J
 - ZTE Z80 Ultra
 
-## Tested Firmware
-
-This recovery was tested on REDMAGIC 11 Pro / NX809J running the global GB firmware:
-
-```text
-Firmware: REDMAGICOS11.0.18MR1_GB
-Android: 16
-Build incremental: 20260408.075725
-Security patch: 2026-03-01
-Build fingerprint: REDMAGIC/NX809J-UN/NX809J:16/BQ2A.250705.001-BP2A.250605.031.A3/20260408.075725:user/release-keys
-```
-
 ## Build
 
 ```shell
