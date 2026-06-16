@@ -89,6 +89,15 @@ fastboot flash recovery_a recovery.img
 fastboot flash recovery_b recovery.img
 ```
 
+For GSI ROM installation, disable verity and verification on the vbmeta partitions from fastboot:
+
+```shell
+fastboot --disable-verity flash vbmeta_a vbmeta.img
+fastboot --disable-verity flash vbmeta_b vbmeta.img
+fastboot --disable-verity --disable-verification flash vbmeta_system_a vbmeta_system.img
+fastboot --disable-verity --disable-verification flash vbmeta_system_b vbmeta_system.img
+```
+
 On the tested NX809J unit, flashing the active recovery slot was enough. No extra vbmeta disable step was required for the tested TWRP recovery image.
 
 If the phone enters a bootloop after installation, open ZTE Toolbox and select option `19`.
