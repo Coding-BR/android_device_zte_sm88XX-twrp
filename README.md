@@ -50,8 +50,11 @@ Needs more testing:
 
 ## Install
 
-<p><strong><span style="color:red">PROHIBITED: Do not try to fix or change the device fingerprint after using this TWRP.</span></strong></p>
-<p><strong><span style="color:red">PROHIBITED: Do not install this TWRP while Magisk or KernelSU modules are active.</span></strong></p>
+> [!CAUTION]
+> Do not try to fix or change the device fingerprint after using this TWRP.
+
+> [!CAUTION]
+> Do not install this TWRP while Magisk or KernelSU modules are active.
 
 Using a userdebug ABL can make installation easier because it enables fastboot access. The `abl_unlock.elf` file is included in this repository.
 
