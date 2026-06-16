@@ -50,14 +50,14 @@ Needs more testing:
 
 ## Install
 
-Using a userdebug ABL can make installation easier because it enables fastboot access.
+Using a userdebug ABL can make installation easier because it enables fastboot access. The `abl_unlock.elf` file is included in this repository.
 
 To enable fastboot with ZTE Toolbox:
 
 1. Open ZTE Toolbox.
 2. Select option `12`.
 3. Enter the target ABL partition name: `abl_a` or `abl_b`.
-4. Flash the userdebug ABL.
+4. Flash the included `abl_unlock.elf` userdebug ABL.
 5. Reboot the phone into fastboot:
 
 ```shell
