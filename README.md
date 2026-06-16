@@ -60,11 +60,9 @@ Quick ZTE Toolbox flow:
 4. Flash the userdebug ABL to enable fastboot.
 5. Boot into fastboot.
 6. Select option `12` in ZTE Toolbox again.
-7. Enter the recovery partition name directly:
+7. Enter the target recovery partition name: `recovery_a` or `recovery_b`.
 
-```text
-recovery
-```
+Repeat the ZTE Toolbox option `12` step for both `recovery_a` and `recovery_b` if you want to flash both recovery slots.
 
 Manual fastboot commands:
 
