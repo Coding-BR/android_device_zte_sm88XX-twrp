@@ -49,6 +49,9 @@ on fs
     setprop sys.usb.configfs 1
 
 on property:sys.usb.config=none && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    stop adbd
+    stop fastbootd
     setprop sys.usb.ffs.ready 0
     setprop sys.usb.ffs.mtp.ready 0
     write /config/usb_gadget/g1/bDeviceClass 0
@@ -65,9 +68,6 @@ on property:sys.usb.config=adb && property:sys.usb.configfs=1
     start adbd
 
 on property:sys.usb.config=mtp,adb && property:sys.usb.configfs=1
-    start adbd
-
-on property:sys.usb.config=sideload && property:sys.usb.configfs=1
     start adbd
 
 on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb && property:sys.usb.configfs=1
