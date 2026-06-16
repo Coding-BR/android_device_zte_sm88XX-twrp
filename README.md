@@ -58,7 +58,11 @@ To enable fastboot with ZTE Toolbox:
 2. Select option `12`.
 3. Enter the target ABL partition name: `abl_a` or `abl_b`.
 4. Flash the userdebug ABL.
-5. Boot into fastboot.
+5. Reboot the phone into fastboot:
+
+```shell
+adb reboot bootloader
+```
 
 You can also flash the recovery image directly with ZTE Toolbox:
 
