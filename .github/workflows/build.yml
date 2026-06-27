@@ -13,15 +13,15 @@ on:
       DEVICE_PATH:
         description: "Device path device/"
         required: true
-        default: "nubia/NX809J"
+        default: "zte/sm88XX"
       DEVICE_NAME:
         description: "Device name"
         required: true
-        default: "NX809J"
+        default: "sm88XX"
       LUNCH_TARGET:
         description: "lunch twrp_xxx"
         required: true
-        default: "NX809J-bp2a-eng"
+        default: "sm88XX-aosp_current-eng"
 permissions:
   contents: write
 jobs:
