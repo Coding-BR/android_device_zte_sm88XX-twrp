@@ -1,8 +1,17 @@
 <!--
     Input:
-        device/qcom/sun/manifest_sun.xml
+        device/qcom/sun/manifest_sm8850.xml
 -->
 <manifest version="4.0" type="device" target-level="202404">
+    <hal format="hidl">
+        <name>android.hardware.keymaster</name>
+        <transport>hwbinder</transport>
+        <version>4.1</version>
+        <interface>
+            <name>IKeymasterDevice</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
     <hal format="aidl">
         <name>android.hardware.gatekeeper</name>
         <fqname>IGatekeeper/default</fqname>
