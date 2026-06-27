@@ -1,325 +1,246 @@
 name: TWRP 16 Builder
-
 on:
   workflow_dispatch:
     inputs:
       TWRP_MANIFEST_URL:
-        description: TWRP manifest URL
-        default: https://github.com/TWRP-Test/platform_manifest_twrp_aosp
+        description: "TWRP manifest url"
         required: true
+        default: "https://github.com/TWRP-Test/platform_manifest_twrp_aosp"
       TWRP_MANIFEST_BRANCH:
-        description: TWRP manifest branch
-        default: twrp-16.0
+        description: "TWRP branch"
         required: true
+        default: "twrp-16.0"
       DEVICE_PATH:
-        description: Device tree path under device/
-        default: zte/sm88XX
+        description: "Device path device/"
         required: true
+        default: "nubia/NX809J"
       DEVICE_NAME:
-        description: Device codename
-        default: sm88XX
+        description: "Device name"
         required: true
+        default: "NX809J"
       LUNCH_TARGET:
-        description: Lunch suffix after twrp_
-        default: sm88XX-aosp_current-eng
+        description: "lunch twrp_xxx"
         required: true
-      BUILD_PARTITION:
-        description: Build target without image suffix
-        default: recovery
-        required: true
-
+        default: "NX809J-bp2a-eng"
 permissions:
   contents: write
-
 jobs:
   build:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 360
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Show build info
-        run: |
-          echo "Device path: device/${{ github.event.inputs.DEVICE_PATH }}"
-          echo "Lunch: twrp_${{ github.event.inputs.LUNCH_TARGET }}"
-          echo "Build target: ${{ github.event.inputs.BUILD_PARTITION }}image"
-          echo "Run: ${{ github.run_id }}"
-          df -h
-
-      - name: Cleanup
-        run: |
-          sudo rm -rf \
-            /opt/hostedtoolcache \
-            /usr/local/lib/android \
-            /usr/share/dotnet \
-            /usr/share/swift \
-            /usr/local/.ghcup \
-            /usr/local/share/boost \
-            /usr/local/share/powershell \
-            /usr/local/lib/node_modules \
-            /usr/share/google-cloud-sdk \
-            /usr/lib/jvm \
-            /opt/az \
-            /opt/microsoft \
-            /opt/pipx \
-            /usr/local/share/chromium \
-            /usr/local/share/edge_driver \
-            /usr/local/share/gecko_driver \
-            /usr/local/share/phantomjs \
-            /usr/local/share/selenium \
-            /var/lib/gems \
-            /var/cache/apt \
-            "$HOME/.cache"
-          docker system prune -af || true
-          df -h
-          root_size_gb="$(df -BG / | awk 'NR==2 {gsub("G","",$2); print $2}')"
-          root_avail_gb="$(df -BG / | awk 'NR==2 {gsub("G","",$4); print $4}')"
-          if [ "${root_size_gb}" -lt 120 ]; then
-            echo "Runner root filesystem is too small for this TWRP build: ${root_size_gb}G total, ${root_avail_gb}G available."
-            echo "Re-run the workflow until GitHub assigns a 145G runner."
-            exit 1
-          fi
-
-      - name: Install packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            bc bison build-essential ccache curl flex g++-multilib gcc-multilib \
-            git gnupg gperf imagemagick lib32ncurses-dev lib32readline-dev \
-            lib32z1-dev libelf-dev liblz4-tool libncurses-dev libsdl1.2-dev \
-            libssl-dev libxml2 libxml2-utils lzop pngcrush python3 rsync \
-            schedtool squashfs-tools xsltproc zip zlib1g-dev
-          mkdir -p "$HOME/bin"
-          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo > "$HOME/bin/repo"
-          chmod a+x "$HOME/bin/repo"
-          echo "$HOME/bin" >> "$GITHUB_PATH"
-
-      - name: Setup swap
-        run: |
-          sudo swapoff -a || true
-          sudo fallocate -l 24G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          free -h
-          swapon --show || true
-          df -h
-
-      - name: Sync source
-        run: |
-          set -e
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          repo init --depth=1 -u "${{ github.event.inputs.TWRP_MANIFEST_URL }}" -b "${{ github.event.inputs.TWRP_MANIFEST_BRANCH }}"
-          repo sync -c --force-sync --no-clone-bundle --no-tags -j4 &
-          sync_pid=$!
-          (
-            while kill -0 "${sync_pid}" 2>/dev/null; do
-              echo "Repo sync still running at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-              sleep 300
-            done
-          ) &
-          heartbeat_pid=$!
-          set +e
-          wait "${sync_pid}"
-          sync_status=$?
-          kill "${heartbeat_pid}" 2>/dev/null || true
-          wait "${heartbeat_pid}" 2>/dev/null || true
-          set -e
-          test "${sync_status}" -eq 0
-
-      - name: Restore wpa_supplicant source
-        run: |
-          set -e
-          if [ ! -d external/wpa_supplicant_8 ]; then
-            git clone --depth=1 --branch android-16.0.0_r1 \
-              https://android.googlesource.com/platform/external/wpa_supplicant_8 \
-              external/wpa_supplicant_8
-          fi
-          python3 - <<'PY'
-          from pathlib import Path
-
-          bp = Path("external/wpa_supplicant_8/wpa_supplicant/Android.bp")
-          text = bp.read_text()
-          marker = "wpa_supplicant_recovery"
-          if marker not in text:
-              text += r'''
-
-          cc_binary {
-              name: "wpa_cli_recovery",
-              recovery: true,
-              srcs: [
-                  "wpa_cli.c",
-                  "src/common/cli.c",
-                  "src/common/wpa_ctrl.c",
-                  "src/utils/common.c",
-                  "src/utils/edit.c",
-                  "src/utils/eloop.c",
-                  "src/utils/os_unix.c",
-                  "src/utils/wpa_debug.c",
-              ],
-              shared_libs: [
-                  "libcutils",
-                  "liblog",
-              ],
-              defaults: [
-                  "wpa_supplicant_no_aidl_cflags_default",
-                  "wpa_supplicant_includes_default",
-              ],
-          }
-
-          cc_binary {
-              name: "wpa_supplicant_recovery",
-              recovery: true,
-              shared_libs: [
-                  "libc",
-                  "libcrypto",
-                  "libcutils",
-                  "libkeystore-engine-wifi-hidl",
-                  "liblog",
-                  "libnl",
-                  "libssl",
-              ],
-              defaults: [
-                  "wpa_supplicant_srcs_default",
-                  "wpa_supplicant_no_aidl_cflags_default",
-                  "wpa_supplicant_includes_default",
-              ],
-          }
-          '''
-              bp.write_text(text)
-          PY
-
-      - name: Check out device tree
-        uses: actions/checkout@v4
-        with:
-          path: device/${{ github.event.inputs.DEVICE_PATH }}
-
-      - name: Patch recovery touch input for NX809J
-        run: |
-          set -e
-          python3 - <<'PY'
-          from pathlib import Path
-
-          events = Path("bootable/recovery/minuitwrp/events.cpp")
-          text = events.read_text()
-          old_key_block = (
-              "\t// Handle keyboard events, value of 1 indicates key down, 0 indicates key up\n"
-              "\tif (ev->type == EV_KEY) {\n"
-              "\t\treturn 0;\n"
-              "\t}\n"
-          )
-          new_key_block = (
-              "\t// Handle keyboard events, value of 1 indicates key down, 0 indicates key up\n"
-              "\tif (ev->type == EV_KEY) {\n"
-              "\t\tif (ev->code == BTN_TOUCH || ev->code == BTN_TOOL_FINGER)\n"
-              "\t\t\treturn 1;\n"
-              "\t\treturn 0;\n"
-              "\t}\n"
-          )
-          if old_key_block not in text:
-              raise SystemExit("events.cpp key handling block not found")
-          text = text.replace(
-              old_key_block,
-              new_key_block,
-          )
-          old_scale_block = (
-              "    *x = (p->x - p->xi.minimum) * (fb_width - 1) / (p->xi.maximum - p->xi.minimum);\n"
-              "    *y = (p->y - p->yi.minimum) * (fb_height - 1) / (p->yi.maximum - p->yi.minimum);\n"
-          )
-          new_scale_block = (
-              "    if (p->xi.maximum > fb_width * 4 && p->yi.maximum > fb_height * 4 &&\n"
-              "        p->x >= 0 && p->x < fb_width && p->y >= 0 && p->y < fb_height) {\n"
-              "        *x = p->x;\n"
-              "        *y = p->y;\n"
-              "    } else {\n"
-              "        *x = (p->x - p->xi.minimum) * (fb_width - 1) / (p->xi.maximum - p->xi.minimum);\n"
-              "        *y = (p->y - p->yi.minimum) * (fb_height - 1) / (p->yi.maximum - p->yi.minimum);\n"
-              "    }\n"
-          )
-          if old_scale_block not in text:
-              raise SystemExit("events.cpp touch scale block not found")
-          text = text.replace(old_scale_block, new_scale_block)
-          events.write_text(text)
-          PY
-
-      - name: Patch recovery haptics for NX809J
-        run: |
-          set -e
-          python3 - <<'PY'
-          from pathlib import Path
-
-          events = Path("bootable/recovery/minuitwrp/events.cpp")
-          text = events.read_text()
-          old = (
-              '#define LEDS_HAPTICS_DURATION_FILE\t"/sys/class/leds/vibrator/duration"\n'
-              '#define LEDS_HAPTICS_ACTIVATE_FILE\t"/sys/class/leds/vibrator/activate"\n'
-          )
-          new = (
-              '#define LEDS_HAPTICS_DURATION_FILE\t"/sys/class/leds/zte_vibrator/duration_aw"\n'
-              '#define LEDS_HAPTICS_ACTIVATE_FILE\t"/sys/class/leds/zte_vibrator/activate_aw"\n'
-          )
-          if old not in text:
-              raise SystemExit("events.cpp LED haptics path block not found")
-          events.write_text(text.replace(old, new))
-          PY
-
-      - name: Build TWRP
-        run: |
-          set -e
-          mkdir -p artifacts
-          export USE_CCACHE=0
-          export SOONG_UI_NINJA_ARGS="-j1"
-          source build/envsetup.sh
-          lunch "twrp_${{ github.event.inputs.LUNCH_TARGET }}"
-          {
-            echo "Disk before build:"
-            df -h
-            echo "Memory before build:"
-            free -h
-            m -j1 "${{ github.event.inputs.BUILD_PARTITION }}image" &
-            build_pid=$!
-            (
-              while kill -0 "${build_pid}" 2>/dev/null; do
-                echo "Build heartbeat at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                ps -o pid,ppid,etime,%cpu,%mem,rss,cmd -p "${build_pid}" || true
-                free -h || true
-                df -h / || true
-                sleep 60
-              done
-            ) &
-            heartbeat_pid=$!
-            set +e
-            wait "${build_pid}"
-            build_status=$?
-            kill "${heartbeat_pid}" 2>/dev/null || true
-            wait "${heartbeat_pid}" 2>/dev/null || true
-            set -e
-            test "${build_status}" -eq 0
-            echo "Disk after build:"
-            df -h
-            echo "Memory after build:"
-            free -h
-          } 2>&1 | tee artifacts/build.log
-          test "${PIPESTATUS[0]}" -eq 0
-          cp "out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_PARTITION }}.img" \
-             "artifacts/TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}.img"
-
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: TWRP-build-log-${{ github.run_id }}
-          path: artifacts/build.log
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}
-          path: artifacts/*.img
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: twrp-${{ github.event.inputs.DEVICE_NAME }}-${{ github.event.inputs.BUILD_PARTITION }}-${{ github.run_id }}
-          name: TWRP 3.7.1-16 ${{ github.event.inputs.DEVICE_NAME }} ${{ github.event.inputs.BUILD_PARTITION }} ${{ github.run_id }}
-          files: artifacts/*.img
+    - name: Show build info
+      run: |
+        if [ -n "${{ github.event.inputs.LUNCH_TARGET }}" ]; then
+          echo "LUNCH_TARGET=${{ github.event.inputs.LUNCH_TARGET }}" >> "$GITHUB_ENV"
+        else
+          echo "LUNCH_TARGET=${{ github.event.inputs.DEVICE_NAME }}" >> "$GITHUB_ENV"
+        fi
+        {
+          echo 'BUILD_INFO<<EOF'
+          echo
+          echo Manifest url: ${{ github.event.inputs.TWRP_MANIFEST_URL }}
+          echo Manifest branch: ${{ github.event.inputs.TWRP_MANIFEST_BRANCH }}
+          echo Device path: ${{ github.event.inputs.DEVICE_PATH }}
+          echo Device name: ${{ github.event.inputs.DEVICE_NAME }}
+          echo Lunch target: ${{ github.event.inputs.LUNCH_TARGET }}
+          echo Build target: recovery.img
+          echo Build date: `date`
+          echo
+          echo EOF
+        } >> "$GITHUB_ENV"
+        echo BUILD_DATE=`date +%F` >> "$GITHUB_ENV"
+        echo "REPO_NAME=$(basename ${{ github.event.inputs.TWRP_MANIFEST_URL }})" >> "$GITHUB_ENV"
+    - name: Cleanup
+      uses: rokibhasansagar/slimhub_actions@main
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        create-symlink: true
+    - name: Setup zram
+      run: |
+        sudo apt install linux-modules-extra-$(uname -r) zram-tools -y
+        sudo modprobe zram
+        sudo sed -i 's/^#PERCENT=50/PERCENT=90/' /etc/default/zramswap
+        sudo sed -i 's/^#PRIORITY=100/PRIORITY=1000/' /etc/default/zramswap
+        sudo systemctl restart zramswap
+        zramctl
+    - name: Setup environment
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt update && sudo apt upgrade -y
+        sudo apt install repo -y
+        git config --global user.name ${{ github.actor }}
+        git config --global user.email ${{ github.actor }}@users.noreply.github.com
+    - name: Sync source
+      run: |
+        repo init -u ${{ github.event.inputs.TWRP_MANIFEST_URL }} -b ${{ github.event.inputs.TWRP_MANIFEST_BRANCH }} --depth=1
+        (while true; do echo "Syncing source..."; sleep 60; done) &
+        TIP_PID=$!
+        repo sync
+        kill $TIP_PID && exit 0
+    - name: Check out device tree
+      uses: actions/checkout@v4
+      with:
+        path: device/${{ github.event.inputs.DEVICE_PATH }}
+    - name: Restore wpa_supplicant source
+      run: |
+        set -e
+        if [ ! -d external/wpa_supplicant_8 ]; then
+          git clone --depth=1 --branch android-16.0.0_r1 \
+            https://android.googlesource.com/platform/external/wpa_supplicant_8 \
+            external/wpa_supplicant_8
+        fi
+        python3 - <<'PY'
+        from pathlib import Path
+        bp = Path("external/wpa_supplicant_8/wpa_supplicant/Android.bp")
+        text = bp.read_text()
+        marker = "wpa_supplicant_recovery"
+        if marker not in text:
+            text += r'''
+        cc_binary {
+            name: "wpa_cli_recovery",
+            recovery: true,
+            srcs: [
+                "wpa_cli.c",
+                "src/common/cli.c",
+                "src/common/wpa_ctrl.c",
+                "src/utils/common.c",
+                "src/utils/edit.c",
+                "src/utils/eloop.c",
+                "src/utils/os_unix.c",
+                "src/utils/wpa_debug.c",
+            ],
+            shared_libs: [
+                "libcutils",
+                "liblog",
+            ],
+            defaults: [
+                "wpa_supplicant_no_aidl_cflags_default",
+                "wpa_supplicant_includes_default",
+            ],
+        }
+        cc_binary {
+            name: "wpa_supplicant_recovery",
+            recovery: true,
+            shared_libs: [
+                "libc",
+                "libcrypto",
+                "libcutils",
+                "libkeystore-engine-wifi-hidl",
+                "liblog",
+                "libnl",
+                "libssl",
+            ],
+            defaults: [
+                "wpa_supplicant_srcs_default",
+                "wpa_supplicant_no_aidl_cflags_default",
+                "wpa_supplicant_includes_default",
+            ],
+        }
+        '''
+            bp.write_text(text)
+        PY
+    - name: Patch recovery touch input for NX809J
+      run: |
+        set -e
+        python3 - <<'PY'
+        from pathlib import Path
+        events = Path("bootable/recovery/minuitwrp/events.cpp")
+        text = events.read_text()
+        old_key_block = (
+            "\t// Handle keyboard events, value of 1 indicates key down, 0 indicates key up\n"
+            "\tif (ev->type == EV_KEY) {\n"
+            "\t\treturn 0;\n"
+            "\t}\n"
+        )
+        new_key_block = (
+            "\t// Handle keyboard events, value of 1 indicates key down, 0 indicates key up\n"
+            "\tif (ev->type == EV_KEY) {\n"
+            "\t\tif (ev->code == BTN_TOUCH || ev->code == BTN_TOOL_FINGER)\n"
+            "\t\t\treturn 1;\n"
+            "\t\treturn 0;\n"
+            "\t}\n"
+        )
+        if old_key_block not in text:
+            raise SystemExit("events.cpp key handling block not found")
+        text = text.replace(
+            old_key_block,
+            new_key_block,
+        )
+        old_scale_block = (
+            "    *x = (p->x - p->xi.minimum) * (fb_width - 1) / (p->xi.maximum - p->xi.minimum);\n"
+            "    *y = (p->y - p->yi.minimum) * (fb_height - 1) / (p->yi.maximum - p->yi.minimum);\n"
+        )
+        new_scale_block = (
+            "    if (p->xi.maximum > fb_width * 4 && p->yi.maximum > fb_height * 4 &&\n"
+            "        p->x >= 0 && p->x < fb_width && p->y >= 0 && p->y < fb_height) {\n"
+            "        *x = p->x;\n"
+            "        *y = p->y;\n"
+            "    } else {\n"
+            "        *x = (p->x - p->xi.minimum) * (fb_width - 1) / (p->xi.maximum - p->xi.minimum);\n"
+            "        *y = (p->y - p->yi.minimum) * (fb_height - 1) / (p->yi.maximum - p->yi.minimum);\n"
+            "    }\n"
+        )
+        if old_scale_block not in text:
+            raise SystemExit("events.cpp touch scale block not found")
+        text = text.replace(old_scale_block, new_scale_block)
+        events.write_text(text)
+        PY
+    - name: Patch recovery haptics for NX809J
+      run: |
+        set -e
+        python3 - <<'PY'
+        from pathlib import Path
+        events = Path("bootable/recovery/minuitwrp/events.cpp")
+        text = events.read_text()
+        old = (
+            '#define LEDS_HAPTICS_DURATION_FILE\t"/sys/class/leds/vibrator/duration"\n'
+            '#define LEDS_HAPTICS_ACTIVATE_FILE\t"/sys/class/leds/vibrator/activate"\n'
+        )
+        new = (
+            '#define LEDS_HAPTICS_DURATION_FILE\t"/sys/class/leds/zte_vibrator/duration_aw"\n'
+            '#define LEDS_HAPTICS_ACTIVATE_FILE\t"/sys/class/leds/zte_vibrator/activate_aw"\n'
+        )
+        if old not in text:
+            raise SystemExit("events.cpp LED haptics path block not found")
+        events.write_text(text.replace(old, new))
+        PY
+    - name: Generate build info
+      run: |
+        echo -e "$BUILD_INFO" >> INFO.txt
+        echo "Change log:" >> INFO.txt
+        set +e
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
+        if [ $? -eq 0 ]; then
+          git log "$LAST_TAG"..HEAD --pretty=format:"- %h-%an: %s" >> INFO.txt
+        else
+          git log --pretty=format:"- %h-%an: %s" >> INFO.txt
+        fi
+        cat INFO.txt
+      working-directory: device/${{ github.event.inputs.DEVICE_PATH }}
+    - name: Build TWRP
+      run: |
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        export CCACHE_DIR=.ccache
+        export CCACHE_EXEC=$(command -v ccache)        
+        export CCACHE_MAXSIZE=5G
+        export USE_CCACHE=1
+        lunch twrp_${{ env.LUNCH_TARGET }}
+        (while true; do echo `date +%T` "Building TWRP..."; free -h; sleep 10; done) &
+        TIP_PID=$!
+        m recoveryimage
+        mv out/target/product/${{ github.event.inputs.DEVICE_NAME }}/recovery.img out/target/product/${{ github.event.inputs.DEVICE_NAME }}/TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ env.BUILD_DATE }}.img
+        kill $TIP_PID && exit 0        
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: | 
+          out/target/product/${{ github.event.inputs.DEVICE_NAME }}/TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ env.BUILD_DATE }}.img
+        name: TWRP-3.7.1-16-${{ github.event.inputs.DEVICE_NAME }}-${{ env.BUILD_DATE }}-${{ github.run_id }}
+        tag_name: ${{ env.BUILD_DATE }}-${{ github.run_id }}
+        body_path: device/${{ github.event.inputs.DEVICE_PATH }}/INFO.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

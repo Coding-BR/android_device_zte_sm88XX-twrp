@@ -32,6 +32,7 @@ on init
     write /sys/fs/selinux/checkreqprot 0
 
 on early-init
+    setprop vendor.gatekeeper.is_security_level_spu 0
     start vendor.gatekeeper_default
 
 service post-boot-script /system/bin/sh -c /vendor/bin/init.kernel.post_boot-canoe_default_6_2.sh
@@ -81,7 +82,8 @@ on property:hwservicemanager.ready=true
     setprop sys.boot_completed 1
 
 on property:vendor.sys.listeners.registered=true
-    start vendor.keymint-strongbox
+    start vendor.keymint-qti
+    start vendor.keymint
 	
 # Touch drivers    
 chmod 0644 /firmware/syna_firmware.img
