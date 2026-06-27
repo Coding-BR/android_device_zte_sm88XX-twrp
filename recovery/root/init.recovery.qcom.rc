@@ -33,7 +33,6 @@ on init
 
 on early-init
     setprop vendor.gatekeeper.is_security_level_spu 0
-    start vendor.gatekeeper_default
 
 service post-boot-script /system/bin/sh -c /vendor/bin/init.kernel.post_boot-canoe_default_6_2.sh
     user root
@@ -82,8 +81,8 @@ on property:hwservicemanager.ready=true
     setprop sys.boot_completed 1
 
 on property:vendor.sys.listeners.registered=true
-    start vendor.keymint-qti
     start vendor.keymint
+    start vendor.gatekeeper_default
 	
 # Touch drivers    
 chmod 0644 /firmware/syna_firmware.img
