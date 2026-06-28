@@ -32,6 +32,9 @@ on init
     write /sys/fs/selinux/checkreqprot 0
 
 on early-init
+    # Disable SPU gatekeeper to use rust-based gatekeeper instead
+    # This avoids gatekeeper crash in recovery (SPU firmware not loaded)
+    setprop vendor.gatekeeper.disable_spu true
     setprop vendor.gatekeeper.is_security_level_spu 0
 
 service post-boot-script /system/bin/sh -c /vendor/bin/init.kernel.post_boot-canoe_default_6_2.sh
@@ -62,6 +65,19 @@ on fs
     wait /dev/block/platform/soc/${ro.boot.bootdevice}
     symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
     write /proc/sys/kernel/firmware_config/force_sysfs_fallback 1
+
+    # Mount persist for Gatekeeper/KeyMint credentials (from xiaomi_myron)
+    mkdir /mnt/vendor 0775 shell system
+    mkdir /mnt/vendor/persist 0775 shell system
+    wait /dev/block/bootdevice/by-name/persist
+    mount ext4 /dev/block/bootdevice/by-name/persist /persist noatime nosuid nodev barrier=1
+    mount none /persist /mnt/vendor/persist bind
+
+    # QSEECom device permissions for keymint/gatekeeper
+    chmod 0660 /dev/qseecom
+    chown system drmrpc /dev/qseecom
+    chmod 0664 /dev/ion
+    chown system system /dev/ion
    
 on property:twrp.modules.loaded=true
     # Mount firmware
@@ -72,7 +88,19 @@ on property:twrp.modules.loaded=true
     write /sys/kernel/boot_adsp/ssr 1
     wait /sys/class/power_supply/battery
     start vendor.health-default
-	start unbind_inputs
+    start unbind_inputs
+
+    # SMCInvoke and QSEECom DMA heap for keymint/gatekeeper (from xiaomi_myron)
+    wait /dev/smcinvoke
+    chown system drmrpc /dev/smcinvoke
+    chmod 0660 /dev/smcinvoke
+
+    wait /dev/qsee_ipc_irq_spss
+    chown system drmrpc /dev/qsee_ipc_irq_spss
+    chmod 0660 /dev/qsee_ipc_irq_spss
+
+    chmod 0444 /dev/dma_heap/qcom,qseecom
+    chmod 0444 /dev/dma_heap/qcom,qseecom-ta
 
 on property:ro.crypto.state=encrypted && property:ro.boot.dynamic_partitions=true
     start prepdecrypt.vendor
@@ -96,5 +124,6 @@ on boot
 
     chmod 0644 /lib/firmware/awinic_haptic_params.bin
 	
+
 
 

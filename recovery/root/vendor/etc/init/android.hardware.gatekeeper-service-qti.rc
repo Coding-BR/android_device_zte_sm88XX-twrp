@@ -1,12 +1,17 @@
 # Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 # All rights reserved.
-# Confidential and Proprietary - Qualcomm Technologies, Inc. 
+# Confidential and Proprietary - Qualcomm Technologies, Inc.
+#
+# MODIFIED: Use gatekeeper-rust-service-qti instead of gatekeeper-service-spu-qti
+# to avoid SPU initialization failure in recovery mode.
+# Aligned with normal system config.
 
-service vendor.gatekeeper_default /vendor/bin/hw/android.hardware.gatekeeper-service-spu-qti
+service vendor.gatekeeper_default /vendor/bin/hw/android.hardware.gatekeeper-rust-service-qti
     class early_hal
-    user root
-    group root
     disabled
+    user system
+    group system
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64:/sbin
     seclabel u:r:recovery:s0
 
 on property:vendor.gatekeeper.is_security_level_spu=0
