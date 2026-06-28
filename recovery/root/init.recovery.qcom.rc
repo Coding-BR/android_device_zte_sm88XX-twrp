@@ -73,9 +73,13 @@ on fs
     mount ext4 /dev/block/bootdevice/by-name/persist /persist noatime nosuid nodev barrier=1
     mount none /persist /mnt/vendor/persist bind
 
-    # QSEECom device permissions for keymint/gatekeeper
+    # QSEECom / SMCInvoke device permissions for keymint/gatekeeper/qseecomd
+    # Must be set BEFORE qseecomd starts (on init), otherwise qseecomd
+    # fails to register listener (status 255) and keymint channel breaks.
     chmod 0660 /dev/qseecom
     chown system drmrpc /dev/qseecom
+    chmod 0660 /dev/smcinvoke
+    chown system drmrpc /dev/smcinvoke
     chmod 0664 /dev/ion
     chown system system /dev/ion
    
@@ -90,11 +94,7 @@ on property:twrp.modules.loaded=true
     start vendor.health-default
     start unbind_inputs
 
-    # SMCInvoke and QSEECom DMA heap for keymint/gatekeeper (from xiaomi_myron)
-    wait /dev/smcinvoke
-    chown system drmrpc /dev/smcinvoke
-    chmod 0660 /dev/smcinvoke
-
+    # QSEECom DMA heap and SPSS IRQ for keymint/gatekeeper
     wait /dev/qsee_ipc_irq_spss
     chown system drmrpc /dev/qsee_ipc_irq_spss
     chmod 0660 /dev/qsee_ipc_irq_spss
