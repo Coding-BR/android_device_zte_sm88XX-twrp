@@ -1,15 +1,17 @@
 # Copyright (c) 2019 Qualcomm Technologies, Inc.
 # All Rights Reserved.
 # Confidential and Proprietary - Qualcomm Technologies, Inc.
-
-on init
-    start vendor.qseecomd
+#
+# MODIFIED for TWRP recovery:
+# - Do NOT start on init; smcinvoke/qseecom permissions are not ready yet.
+# - init.recovery.qcom.rc starts this after modules load and permissions are set.
 
 service vendor.qseecomd /vendor/bin/qseecomd
     socket notify-topology stream 660 system drmrpc
     class core
     user root
     group root drmrpc
+    disabled
     seclabel u:r:recovery:s0
 
 on property:vendor.car.hiber=hiberExit

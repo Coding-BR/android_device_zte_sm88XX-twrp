@@ -99,6 +99,9 @@ on property:twrp.modules.loaded=true
     chmod 0444 /dev/dma_heap/qcom,qseecom
     chmod 0444 /dev/dma_heap/qcom,qseecom-ta
 
+    # qseecomd needs smcinvoke/qseecom permissions ready; start it now.
+    start vendor.qseecomd
+
 on property:ro.crypto.state=encrypted && property:ro.boot.dynamic_partitions=true
     start prepdecrypt.vendor
 
