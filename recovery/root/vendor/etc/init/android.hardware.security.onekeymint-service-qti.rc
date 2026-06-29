@@ -1,9 +1,16 @@
-on init
-    start vendor.keymint
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+# All rights reserved.
+# Confidential and Proprietary - Qualcomm Technologies, Inc.
+#
+# MODIFIED for TWRP recovery:
+# - Keep disabled; do NOT start on init.
+# - init.recovery.qcom.rc starts this after qseecomd listeners are registered.
+# - Running keymint before the TEE channel is ready causes decryption failures.
 
 service vendor.keymint /vendor/bin/hw/android.hardware.security.onekeymint-service-qti
     class early_hal
     user root
     group root drmrpc
     setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64:/sbin:/odm/lib64
+    disabled
     seclabel u:r:recovery:s0

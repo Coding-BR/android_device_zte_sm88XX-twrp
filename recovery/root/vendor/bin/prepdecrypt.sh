@@ -369,7 +369,7 @@ if [ "$sdkver" -ge 26 ]; then
 					venpatchlevel=$(getprop ro.vendor.build.security_patch)
 					log_print 2 "Current Vendor Security Patch Level: $venpatchlevel"
 					venpatchlevel_device=$(grep -i -m 1 'ro.vendor.build.security_patch=' "$TEMPVEN/$BUILDPROP"  | cut -f2 -d'=' -s)
-					if ! [ "$venpatchlevel" = "venpatchlevel_device" ]; then
+					if ! [ "$venpatchlevel" = "$venpatchlevel_device" ]; then
 						$setprop_bin "ro.vendor.build.security_patch" "$venpatchlevel_device"
 						sed -i "s/ro.vendor.build.security_patch=.*/ro.vendor.build.security_patch=""$venpatchlevel_device""/g" "/$DEFAULTPROP" ;
 						venpatchlevel_new=$(getprop ro.vendor.build.security_patch)
