@@ -23,10 +23,11 @@ struct ModelInfo {
 };
 
 // ZTE SM88XX platform device variants
+// Values are aligned with stock ro.product.* properties where possible.
 const std::unordered_map<std::string, ModelInfo> kModelInfoMap = {
     {"NX741J",  {"ZTE",   "Z80_Ultra",       "ZTE",   "Z80 Ultra",       "ZTE-Z80-Ultra"}},
-    {"NX809J",  {"nubia", "RedMagic_11_Pro", "nubia", "RedMagic 11 Pro", "RedMagic-11-Pro"}},
-    {"DEFAULT", {"ZTE",   "SM88XX",          "ZTE",   "SM88XX",          "ZTE-SM88XX"}},
+    {"NX809J",  {"REDMAGIC", "NX809J",       "nubia", "NX809J",          "RedMagic-11-Pro"}},
+    {"DEFAULT", {"ZTE",      "SM88XX",       "ZTE",   "SM88XX",          "ZTE-SM88XX"}},
 };
 
 /*
