@@ -1,14 +1,9 @@
-# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-# All rights reserved.
-# Confidential and Proprietary - Qualcomm Technologies, Inc.
-#
-# MODIFIED: Add disabled and remove on-init start.
-# KeyMint must start AFTER qseecomd listener is registered,
-# otherwise channel enters broken state (TEE not ready).
-# init.recovery.qcom.rc starts it on vendor.sys.listeners.registered=true.
+on init
+    start vendor.keymint
 
 service vendor.keymint /vendor/bin/hw/android.hardware.security.onekeymint-service-qti
     class early_hal
-    disabled
-    user system
+    user root
+    group root drmrpc
+    setenv LD_LIBRARY_PATH /vendor/lib64:/vendor/lib64/hw:/system/lib64:/sbin:/odm/lib64
     seclabel u:r:recovery:s0
