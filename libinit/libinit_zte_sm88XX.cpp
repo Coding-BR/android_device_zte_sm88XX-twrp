@@ -10,7 +10,6 @@
 
 #include <unordered_map>
 #include <string>
-#include <vector>
 
 using android::base::GetProperty;
 
