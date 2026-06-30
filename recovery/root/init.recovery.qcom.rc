@@ -24,6 +24,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
 import /init.recovery.wlan.rc
 import /init.recovery.haptics.rc
 
@@ -31,8 +32,7 @@ on init
     write /sys/fs/selinux/checkreqprot 0
 
 on early-init
-    setprop vendor.gatekeeper.disable_spu true
-    setprop vendor.gatekeeper.is_security_level_spu 0
+    start vendor.gatekeeper_default
 
 service post-boot-script /system/bin/sh -c /vendor/bin/init.kernel.post_boot-canoe_default_6_2.sh
     user root
@@ -62,19 +62,6 @@ on fs
     wait /dev/block/platform/soc/${ro.boot.bootdevice}
     symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
     write /proc/sys/kernel/firmware_config/force_sysfs_fallback 1
-
-    # Mount persist for Gatekeeper/KeyMint credentials
-    mkdir /mnt/vendor 0775 shell system
-    mkdir /mnt/vendor/persist 0775 shell system
-    wait /dev/block/bootdevice/by-name/persist
-    mount ext4 /dev/block/bootdevice/by-name/persist /persist noatime nosuid nodev barrier=1
-    mount none /persist /mnt/vendor/persist bind
-
-    # QSEECom device permissions for keymint/gatekeeper
-    chmod 0660 /dev/qseecom
-    chown system drmrpc /dev/qseecom
-    chmod 0664 /dev/ion
-    chown system system /dev/ion
    
 on property:twrp.modules.loaded=true
     # Mount firmware
@@ -85,19 +72,7 @@ on property:twrp.modules.loaded=true
     write /sys/kernel/boot_adsp/ssr 1
     wait /sys/class/power_supply/battery
     start vendor.health-default
-    start unbind_inputs
-
-    # SMCInvoke and QSEECom DMA heap for keymint/gatekeeper (from xiaomi_myron)
-    wait /dev/smcinvoke
-    chown system drmrpc /dev/smcinvoke
-    chmod 0660 /dev/smcinvoke
-
-    wait /dev/qsee_ipc_irq_spss
-    chown system drmrpc /dev/qsee_ipc_irq_spss
-    chmod 0660 /dev/qsee_ipc_irq_spss
-
-    chmod 0444 /dev/dma_heap/qcom,qseecom
-    chmod 0444 /dev/dma_heap/qcom,qseecom-ta
+	start unbind_inputs
 
 on property:ro.crypto.state=encrypted && property:ro.boot.dynamic_partitions=true
     start prepdecrypt.vendor
@@ -106,8 +81,7 @@ on property:hwservicemanager.ready=true
     setprop sys.boot_completed 1
 
 on property:vendor.sys.listeners.registered=true
-    start vendor.keymint
-    start vendor.gatekeeper_default
+    start vendor.keymint-strongbox
 	
 # Touch drivers    
 chmod 0644 /firmware/syna_firmware.img
